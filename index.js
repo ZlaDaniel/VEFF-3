@@ -1,57 +1,50 @@
-// Project 03/index.js
 const logic = require('./logic');
 const express = require('express');
 const app = express();
 const url = require('body-parser');
 const port = '3000';
 
-/* ============================================================================================ */
-/* Setup                                                                                        */
-/* ============================================================================================ */
-
 app.use(url.json());
-app.listen(port, () => console.log(`Weather app listening on port ${port}!`));
+app.listen(port, () => console.log(`Event app listening on port ${port}!`));
 
 var events = [];
-var observations = [];
+var bookings = [];
 var errorMessages = [
     'All good.',
     'The request body is undefined.',
-    'Description "description": is missing',
-    'Latitude "lat": must be in range [-90, 90].',
-    'Longitude "lon": must be in range [-180, 180].',
-    'Tempeture "temp": must be a number',
-    'Wind speed "windSpeed": must be a non negative number.',
-    'Wind direction "windDir": must be lowercase cardinal direction',
-    'Precipitation "prec": must not be negative.',
-    'Humidity "hum": musts be in range [0, 100]'
+    'Name is missing.',
+    'Capacity must be a number larger or equal to 0.',
+    'StartDate is missing.',
+    'StartDate can not be in the past.',
+    'EndDate is missing.',
+    'EndDate can not be before the StartDate.',
+    'Description is missing.',
+    'Location is missing.',
+    'FirstName is missing.',
+    'LastName is missing.',
+    'Spots must be a number larger or equal to 0.',
+    'Tel must be a number.',
+    'Tel and Email can not both be missing.',
+    'There are existing bookings for this event so it cant be updated.',
+    'There are existing bookings for this event so it cant be deleted.'
 ];
+//--------------------------------------------------------------------//
+//-------------------------------EVENTS-------------------------------//
+//--------------------------------------------------------------------//
 
-/* ============================================================================================ */
-/* GET requests                                                                                 */
-/* ============================================================================================ */
-
-/* 
-    s1. Read all stations
-        Returns an array of all stations. For each station, 
-        only the description and the id is included in theresponse. 
-*/
+// 1. Read all events
 app.get('/api/v1/events', (req, res) => {
-    let shortStations = [];
-    events.forEach(station => {
-        shortEvents.push({ id: event.id, description: event.description });
+    let shortEvents = [];
+    events.forEach(event => {
+        shortEvents.push({ name: event.name, id: event.id, capacity: event.capacity, startDate: event.startDate, endDate: event.endDate });
     });
     res.status(200).json(shortEvents);
 });
 
-
-/* 
-    s2. Read an individual station 
-        Returns all attributes of a specified station. 
-*/
-app.get('/api/v1/events/:sId', (req, res) => {
+// 2. Read an individual event
+app.get('/api/v1/events/:eId', (req, res) => {
     for (let i = 0; i < events.length; i++) {
-        if (Number(events[i].id) === Number(req.params.sId)) {
+        if (Number(events[i].id) === Number(req.params.eId)) {
             res.status(200).json(events[i]);
             return;
         }
@@ -59,49 +52,135 @@ app.get('/api/v1/events/:sId', (req, res) => {
     res.status(404).json({ message: 'event not found.' });
 });
 
+// 3. Create a new event
+app.post('/api/v1/events', (req, res) => {
+    let validationCode = logic.eventValidation(req.query);
+    if (validationCode) {
+        res.status(400).json({ message: errorMessages[validationCode] });
+    } else {
+        let startDateUTC = eval(req.query.startDate)
+        let endDateUTC = eval(req.query.endDate)
+        let newEvent = Object(
+            {
+                id: logic.getNewEventId(),
+                name: req.query.name,
+                description: req.query.description,
+                location: req.query.location,
+                capacity: Number(req.query.capacity),
+                startDate: startDateUTC.toUTCString(),
+                endDate: endDateUTC.toUTCString(),
+                bookings: []
+            }
+        );
+        events.push(newEvent);
+        res.status(201).json(newEvent);
+    }
+});
 
-/*  
-    o1. Read all observations for a station
-        Returns an array of all observations (with all attributes) for a specified station.
-*/
-app.get('/api/v1/events/:sId/bookings', (req, res) => {
+// 4. Update an event
+app.put('/api/v1/events/:eId', (req, res) => {
     for (let i = 0; i < events.length; i++) {
-        if (Number(events[i].id) === Number(req.params.sId)) {
-            let obs = [];
+        if (Number(events[i].id) === Number(req.params.eId)) {
+            if (events[i].bookings.length == 0) {
+                validationCode = logic.eventUpdateValidation(req.query);
+                if (validationCode) {
+                    res.status(400).json({ message: errorMessages[validationCode] });
+                } else {
+                    events[i].name = req.query.name;
+                    events[i].description = req.query.description;
+                    events[i].location = req.query.location;
+                    events[i].capacity = Number(req.query.capacity);
+                    let startDateUTC = eval(req.query.startDate)
+                    events[i].startDate = startDateUTC.toUTCString();
+                    let endDateUTC = eval(req.query.endDate)
+                    events[i].endDate = endDateUTC.toUTCString();
+                    res.status(200).json(events[i]);
+                    return;
+                }
+            }
+            else {
+                res.status(400).json({ message: errorMessages[15] });
+                return;
+            }
+        }
+    }
+    res.status(404).json({ message: 'event not found' });
+});
+
+// 5. Delete an event
+app.delete('/api/v1/events/:eId', (req, res) => {
+    let deletedEvent = [];
+    for (let i = 0; i < events.length; i++) {
+        if (Number(events[i].id) === Number(req.params.eId)) {
+            if (events[i].bookings.length == 0) {
+                deletedEvent = events[i];
+                events.splice(i--, 1)
+                res.status(200).json(deletedEvent);
+                return;
+            }
+            else {
+                res.status(400).json({ message: errorMessages[16] });
+                return;
+            }
+        }
+    }
+    res.status(404).json({ message: 'event not found' });
+});
+
+// 6. Delete all events
+app.delete('/api/v1/events', (req, res) => {
+    for (let i = 0; i < events.length; i++) {
+        let bks = [];
+        for (let j = 0; j < bookings.length; j++) {
+            events[i].bookings.forEach(bId => {
+                if (Number(bookings[j].id) === Number(bId)) {
+                    bks.push(bookings[j]);
+                }
+            });
+        }
+        events[i].bookings = bks;
+    }
+    res.status(200).json(events);
+    events = [];
+    bookings = [];
+});
+
+//----------------------------------------------------------------------//
+//-------------------------------BOOKINGS-------------------------------//
+//----------------------------------------------------------------------//
+
+// 1. Read all bookings for an event
+app.get('/api/v1/events/:eId/bookings', (req, res) => {
+    for (let i = 0; i < events.length; i++) {
+        if (Number(events[i].id) === Number(req.params.eId)) {
+            let bks = [];
             for (let j = 0; j < bookings.length; j++) {
-                events[i].bookings.forEach(oId => {
-                    if (Number(bookings[j].id) === Number(oId)) {
-                        obs.push(bookings[j]);
+                events[i].bookings.forEach(bId => {
+                    if (Number(bookings[j].id) === Number(bId)) {
+                        bks.push(bookings[j]);
                     }
                 });
             }
-            res.status(200).json(obs);
+            res.status(200).json(bks);
             return;
         }
     }
     res.status(404).json({ message: 'event not found.' });
 });
 
-
-/*  
-    o2. Read an individual observation
-        Returns all attributes of a specified observation (for a station).
-*/
-app.get('/api/v1/events/:sId/bookings/:oId', (req, res) => {
+// 2. Read an individual booking
+app.get('/api/v1/events/:eId/bookings/:bId', (req, res) => {
     for (let i = 0; i < events.length; i++) {
-        if (Number(events[i].id) === Number(req.params.sId)) {
+        if (Number(events[i].id) === Number(req.params.eId)) {
             for (let j = 0; j < bookings.length; j++) {
-                if (Number(bookings[j].id) === Number(req.params.oId)) {
-                    res.status(200).json(
-                        {
-                            date: bookings[j].date,
-                            temp: bookings[j].temp,
-                            windSpeed: bookings[j].windSpeed,
-                            windDir: bookings[j].windDir,
-                            prec: bookings[j].prec,
-                            hum: bookings[j].hum
+                if (Number(bookings[j].id) === Number(req.params.bId)) {
+                    for (let k = 0; k < events[i].bookings.length; k++) {
+                        if (Number(events[i].bookings[k]) === Number(req.params.bId)) {
+                            res.status(200).json(bookings[j]);
+                            return;
                         }
-                    );
+                    }
+                    res.status(404).json({ message: 'booking found but does not belong to this event.' });
                     return;
                 }
             }
@@ -112,63 +191,25 @@ app.get('/api/v1/events/:sId/bookings/:oId', (req, res) => {
     res.status(404).json({ message: 'event not found.' });
 });
 
-/* ============================================================================================ */
-/* POST requests                                                                                */
-/* ============================================================================================ */
-
-/*  
-    s3. Create a new station
-        Creates a new station. The endpoint expects all attributes apart 
-        from the id in the request body. The id shall be auto-generated. 
-        The request, if successful, shall return the new station 
-        (all attributes, including id).
-*/
-app.post('/api/v1/events', (req, res) => {
-    let validationCode = logic.eventValidation(req.body);
-    if (validationCode) {
-        res.status(400).json({ message: errorMessages[validationCode] });
-    } else {
-        let newEvent = Object(
-            {
-                id: logic.getNewEventId(),
-                description: req.body.description,
-                lon: Number(req.body.lon),
-                lat: Number(req.body.lat),
-                bookings: []
-            }
-        );
-        events.push(newEvent);
-        res.status(201).json(newEvent);
-    }
-});
-
-
-/*  
-    o3. Create a new observation
-        Creates a new observation for a specified station. The endpoint expects all attributes 
-        apart from the id and the date in the request body. The id (unique, non-negative number) 
-        and the date (current date) shall be auto-generated. The request, if successful, 
-        shall return the new observation (all attributes, including id and date).
-*/
-app.post('/api/v1/events/:sId/bookings', (req, res) => {
-    let validationCode = logic.bookingValidation(req.body);
+// 3. Create a new booking
+app.post('/api/v1/events/:eId/bookings', (req, res) => {
+    let validationCode = logic.bookingValidation(req.query);
     if (validationCode) {
         res.status(400).json({ message: errorMessages[validationCode] });
     } else {
         let newBooking = Object(
             {
                 id: logic.getNewBookingId(),
-                date: new Date().getTime(),
-                temp: Number(req.body.temp),
-                windSpeed: Number(req.body.windSpeed),
-                windDir: req.body.windDir,
-                prec: Number(req.body.prec),
-                hum: Number(req.body.hum)
+                firstName: req.query.firstName,
+                lastName: req.query.lastName,
+                spots: Number(req.query.spots),
+                email: req.query.email,
+                tel: Number(req.query.tel)
             }
         );
-        let parentEvent = logic.findEventWithID(events, req.params.sId);
-        if (parentEvent !== null) {
-            parentEvent.bookings.push(newBooking.id);
+        let bookingEvent = logic.findEventWithID(events, req.params.eId);
+        if (bookingEvent !== null) {
+            bookingEvent.bookings.push(newBooking.id);
             bookings.push(newBooking)
             res.status(201).json(newBooking);
             return;
@@ -177,141 +218,55 @@ app.post('/api/v1/events/:sId/bookings', (req, res) => {
     }
 });
 
-/* ============================================================================================ */
-/* PUT requests                                                                                 */
-/* ============================================================================================ */
-
-/*  
-    s5. Update a station
-        (Completely) Updates an existing station. The updated data is expected in the request body (excluding the id). 
-        The request, if successful, returns all updated attributes of the station.
-*/
-app.put('/api/v1/events/:sId', (req, res) => {
+// 4. Delete a booking
+app.delete('/api/v1/events/:eId/bookings/:bId', (req, res) => {
     for (let i = 0; i < events.length; i++) {
-        if (Number(events[i].id) === Number(req.params.sId)) {
-            validationCode = logic.eventValidation(req.body);
-            if (validationCode) {
-                res.status(400).json({ message: errorMessages[validationCode] });
-            } else {
-                events[i].description = req.body.description;
-                events[i].lat = req.body.lat;
-                events[i].lon = req.body.lon;
-                res.status(200).json(events[i]);
-                return;
-            }
-        }
-    }
-    res.status(404).json({ message: 'event not found' });
-});
-
-
-/* ============================================================================================ */
-/* DELETE requests                                                                              */
-/* ============================================================================================ */
-
-/*  
-   s6. Delete all stations
-        Deletes all existing stations. The request also deletes all observations for all existing stations. The
-        request, if successful, returns all deleted stations (all attributes), as well as their observations (as a
-        part of the observations attribute).
-*/
-app.delete('/api/v1/events', (req, res) => {
-    for (let i = 0; i < events.length; i++) {
-        let obs = [];
-        for (let j = 0; j < bookings.length; j++) {
-            events[i].bookings.forEach(oId => {
-                if (Number(bookings[j].id) === Number(oId)) {
-                    obs.push(bookings[j]);
-                }
-            });
-        }
-        events[i].bookings = obs;
-    }
-    res.status(200).json({ events: events });
-    events = [];
-    bookings = [];
-});
-
-
-/*  
-    s4. Delete a station
-        Deletes an existing station. The request also deletes all observations for the given station. 
-        The request, if successful, returns all attributes of the deleted station 
-        (including all observations in the observations attribute).
-*/
-app.delete('/api/v1/events/:sId', (req, res) => {
-    let obs = [];
-    for (let i = 0; i < events.length; i++) {
-        if (Number(events[i].id) === Number(req.params.sId)) {
+        if (Number(events[i].id) === Number(req.params.eId)) {
             for (let j = 0; j < bookings.length; j++) {
-                events[i].bookings.forEach(oId => {
-                    if (Number(bookings[j].id) === Number(oId)) {
-                        obs.push(bookings.splice(j--, 1));
+                if (Number(bookings[j].id) === Number(req.params.bId)) {
+                    for (let k = 0; k < events[i].bookings.length; k++) {
+                        if (Number(events[i].bookings[k]) === Number(req.params.bId)) {
+                            events[i].bookings.splice(k--, 1);
+                            deletedBooking = bookings[j];
+                            bookings.splice(j--, 1);
+                            res.status(202).json(deletedBooking);
+                            return;
+                        }
                     }
-                });
-            }
-            res.status(200).json({ events: events.splice(i, 1), bookings: obs });
-            return;
-        }
-    }
-    res.status(404).json({ message: 'event not found' });
-});
-
-
-/*  
-    o5. Delete all observations for a station
-        Deletes all existing observations for a specified station. The request, 
-        if successful, returns all deleted observations (all attributes).
-*/
-app.delete('/api/v1/stations/:sId/observations/', (req, res) => {
-    let obs = [];
-    for (let i = 0; i < stations.length; i++) {
-        if (Number(stations[i].id) === Number(req.params.sId)) {
-            for (let j = 0; j < observations.length; j++) {
-                for (let k = 0; k < stations[i].observations.length; k++) {
-                    if (Number(observations[j].id) === Number(stations[i].observations[k])) {
-                        obs.push(observations.splice(j--, 1));
-                    }
+                    res.status(404).json({ message: 'booking found but does not belong to this event.' });
+                    return;
                 }
             }
-            stations[i].observations = [];
-            res.status(200).json({ observations: obs });
+            res.status(404).json({ message: 'booking not found.' });
             return;
         }
     }
-    res.status(404).json({ message: 'station not found.' });
+    res.status(404).json({ message: 'event not found.' });
 });
 
-
-/*  
-    o4. Delete an observation
-        Deletes an existing observation for a specified station. The request, 
-        if successful, returns all attributes of the deleted observations[j].
-*/
-app.delete('/api/v1/stations/:sId/observations/:oId', (req, res) => {
-    for (let i = 0; i < stations.length; i++) {
-        if (Number(stations[i].id) === Number(req.params.sId)) {
-            for (let j = 0; j < observations.length; j++) {
-                if (Number(observations[j].id) === Number(req.params.oId)) {
-                    for (let k = 0; k < stations[i].observations.length; k++) {
-                        if (Number(stations[i].observations[k]) === Number(req.params.oId)) {
-                            stations[i].observations.splice(k, 1);
-                            res.status(202).json({ observations: observations.splice(j, 1) });
-                            return;
+// 5. Delete all bookings for an event
+app.delete('/api/v1/events/:eId/bookings', (req, res) => {
+    let deletedBookings = [];
+    for (let i = 0; i < events.length; i++) {
+        if (Number(events[i].id) === Number(req.params.eId)) {
+            for (let j = 0; j < bookings.length; j++) {
+                for (let k = 0; k < events[i].bookings.length; k++) {
+                    if (bookings[j] !== undefined) {
+                        if (Number(bookings[j].id) === Number(events[i].bookings[k])) {
+                            deletedBookings.push(bookings.splice(j--, 1));
                         }
                     }
                 }
             }
-            res.status(404).json({ message: 'observation not found.' });
+            events[i].bookings = []
+            res.status(200).json(deletedBookings);
             return;
         }
     }
-    res.status(404).json({ message: 'station not found.' });
+    res.status(404).json({ message: 'event not found.' });
 });
 
-/* ============================================================================================ */
-/* Default: Not supported                                                                       */
-/* ============================================================================================ */
+// Unknown commands
 
 app.use('*', (req, res) => {
     res.status(405).json({ message: 'Operation not supported.' });

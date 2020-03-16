@@ -1,51 +1,99 @@
-// Project 03/logic.js
+var eventCount = 0;
+var bookingCount = 0;
 
-var sSerial = 1;
-var oSerial = 1;
-
-// This function makes sure that all the parameters for a station object are valid
 exports.eventValidation = function(ob) {
     if(ob === undefined) {
         return 1;
     }
-    if(ob.description === undefined) {
-        return 2;   
+    if(ob.name === undefined) {
+        return 2;  
     }
-    if(ob.lat === undefined || Number.isNaN(Number(ob.lat)) == NaN || Number(ob.lat) < -90 || Number(ob.lat) > 90) {
-        return 3;
+    if(ob.capacity === undefined || Number.isNaN(Number(ob.capacity)) == NaN || Number(ob.capacity) < 0 ) {
+        return 3;    
     }
-    if(ob.lon === undefined || Number.isNaN(Number(ob.lon)) || Number(ob.lon) < -180 || Number(ob.lon) > 180) {
-        return 4;
+    if(ob.startDate === undefined) {
+        return 4;    
+    }
+    if(eval(ob.startDate) <= Date.now()) {
+        return 5;
+    }
+    if(ob.endDate === undefined) {
+        return 6;    
+    }
+    if(eval(ob.endDate) <= eval(ob.startDate)) {
+        return 7;
     }
     return 0
 }
-// This function makes sure that all the parameters for an observation object are valid
+
+exports.eventUpdateValidation = function(ob) {
+    if(ob === undefined) {
+        return 1;
+    }
+    if(ob.name === undefined) {
+        return 2;  
+    }
+    if(ob.capacity === undefined || Number.isNaN(Number(ob.capacity)) == NaN || Number(ob.capacity) < 0 ) {
+        return 3;    
+    }
+    if(ob.startDate === undefined) {
+        return 4;    
+    }
+    if(eval(ob.startDate) <= Date.now()) {
+        return 5;
+    }
+    if(ob.endDate === undefined) {
+        return 6;    
+    }
+    if(eval(ob.endDate) <= eval(ob.startDate)) {
+        return 7;
+    }
+    if(ob.description === undefined) {
+        return 8;  
+    }
+    if(ob.location === undefined) {
+        return 9;  
+    }
+    return 0
+}
+
 exports.bookingValidation = function(ob){
     if(ob === undefined) {
         return 1;
     }
-    if(ob.temp === undefined || Number.isNaN(Number(ob.temp)) || Number(ob.temp) < -273.15) {
-        return 5;
+    if(ob.firstName === undefined) {
+        return 10;  
     }
-    if(ob.windSpeed === undefined || Number.isNaN(Number(ob.windSpeed)) || Number(ob.windSpeed) < 0) {
-        return 6;
+    if(ob.lastName === undefined) {
+        return 11;  
     }
-    if(ob.windDir === undefined || !(["n","nne","ne","ene","e","ese","se","sse","s","ssw","sw","wsw","w","wnw","nw","nnw"].find((el) => {return (el === ob.windDir)}))) {
-    return 7;
+    // (e) Spots cannot be larger than the remaining capacity of an event.
+    // þetta vantar
+    if(ob.spots === undefined || Number.isNaN(Number(ob.spots)) || Number(ob.spots) < 0) {
+        return 12;  
     }
-    if(ob.prec === undefined || Number.isNaN(Number(ob.prec)) || Number(ob.prec) < 0) {
-        return 8;
+    if(ob.tel === undefined && ob.email === undefined) {
+        return 14; 
     }
-    if(ob.hum === undefined || Number.isNaN(Number(ob.hum)) || Number(ob.hum) < 0 && Number(ob.hum) > 100) {
-        return 9;
+    if(ob.email === undefined && Number.isNaN(Number(ob.tel))) {
+        return 13;
     }
     return 0;
 }
 
 exports.getNewEventId = function () {
-    return sSerial++;
+    return eventCount++;
 }
 
 exports.getNewBookingId = function() {
-    return oSerial++;
+    return bookingCount++;
+}
+
+exports.findEventWithID = function(events, id) {
+    for (let i = 0; i < events.length; i++) {
+        if (events[i].id == id) {
+            return events[i];
+        }
+    }
+    return null;
 }
