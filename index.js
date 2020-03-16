@@ -237,9 +237,7 @@ app.post('/api/v1/events/:eId/bookings', (req, res) => {
         let bookingEvent = logic.findEventWithID(events, req.params.eId);
         if (bookingEvent !== null) {
             let reservedSpots = getReservedSpots(bookingEvent);
-            console.log("reserved", reservedSpots)
             let totalSpots = reservedSpots + newBooking.spots;
-            console.log("total", totalSpots)
             if (totalSpots <= bookingEvent.capacity) {
                 bookingEvent.bookings.push(newBooking.id);
                 bookings.push(newBooking)
@@ -265,7 +263,7 @@ app.delete('/api/v1/events/:eId/bookings/:bId', (req, res) => {
                             events[i].bookings.splice(k--, 1);
                             deletedBooking = bookings[j];
                             bookings.splice(j--, 1);
-                            res.status(202).json(deletedBooking);
+                            res.status(200).json(deletedBooking);
                             return;
                         }
                     }
