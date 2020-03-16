@@ -2,10 +2,10 @@ const logic = require('./logic');
 const express = require('express');
 const app = express();
 const url = require('body-parser');
-const port = '3000';
+//const port = '3000';
 
 app.use(url.json());
-app.listen(port, () => console.log(`Event app listening on port ${port}!`));
+//app.listen(port, () => console.log(`Event app listening on port ${port}!`));
 
 var events = [];
 var bookings = [];
