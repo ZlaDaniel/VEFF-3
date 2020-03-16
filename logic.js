@@ -8,53 +8,57 @@ exports.eventValidation = function(ob) {
     if(ob.name === undefined) {
         return 2;  
     }
-    if(ob.capacity === undefined || Number.isNaN(Number(ob.capacity)) == NaN || Number(ob.capacity) < 0 ) {
-        return 3;    
+    if(ob.capacity === undefined) {
+        return 3;
     }
     if(ob.startDate === undefined) {
-        return 4;    
-    }
-    if(eval(ob.startDate) <= Date.now()) {
-        return 5;
+        return 4;
     }
     if(ob.endDate === undefined) {
-        return 6;    
+        return 5;
     }
-    if(eval(ob.endDate) <= eval(ob.startDate)) {
-        return 7;
+    if(typeof ob.capacity === 'string'){
+        return 12;
+    }
+    if(typeof ob.startDate === 'string'){
+        return 13;
+    }
+    if(typeof ob.endDate === 'string'){
+        return 14;
+    }
+    if(Number.isNaN(Number(ob.capacity)) == NaN) {
+        return 17;  
+    }
+    if(Number.isNaN(Number(ob.startDate)) == NaN) {
+        return 18;    
+    }
+    if(Number.isNaN(Number(ob.endDate)) == NaN) {
+        return 19;    
+    }
+    if(Number(ob.capacity) < 0) {
+        return 22;
+    }
+    if(new Date(ob.startDate*1000) <= new Date()) {
+        return 23;
+    }
+    if(new Date(ob.endDate*1000) <= new Date(ob.startDate*1000)) {
+        return 24;
     }
     return 0
 }
 
 exports.eventUpdateValidation = function(ob) {
-    if(ob === undefined) {
-        return 1;
+    let validation = this.eventValidation(ob);
+    if (validation === 0) {
+        if(ob.description === undefined) {
+            return 6;  
+        }
+        if(ob.location === undefined) {
+            return 7;  
+        }
+        return 0
     }
-    if(ob.name === undefined) {
-        return 2;  
-    }
-    if(ob.capacity === undefined || Number.isNaN(Number(ob.capacity)) == NaN || Number(ob.capacity) < 0 ) {
-        return 3;    
-    }
-    if(ob.startDate === undefined) {
-        return 4;    
-    }
-    if(eval(ob.startDate) <= Date.now()) {
-        return 5;
-    }
-    if(ob.endDate === undefined) {
-        return 6;    
-    }
-    if(eval(ob.endDate) <= eval(ob.startDate)) {
-        return 7;
-    }
-    if(ob.description === undefined) {
-        return 8;  
-    }
-    if(ob.location === undefined) {
-        return 9;  
-    }
-    return 0
+    return validation
 }
 
 exports.bookingValidation = function(ob){
@@ -62,21 +66,31 @@ exports.bookingValidation = function(ob){
         return 1;
     }
     if(ob.firstName === undefined) {
-        return 10;  
+        return 8;  
     }
     if(ob.lastName === undefined) {
-        return 11;  
+        return 9;  
     }
-    // (e) Spots cannot be larger than the remaining capacity of an event.
-    // þetta vantar
-    if(ob.spots === undefined || Number.isNaN(Number(ob.spots)) || Number(ob.spots) < 0) {
-        return 12;  
+    if(ob.spots === undefined) {
+        return 10;
     }
     if(ob.tel === undefined && ob.email === undefined) {
-        return 14; 
+        return 11; 
     }
-    if(ob.email === undefined && Number.isNaN(Number(ob.tel))) {
-        return 13;
+    if(typeof ob.spots === 'string'){
+        return 15;
+    }
+    if(typeof ob.tel === 'string'){
+        return 16;
+    }
+    if(Number.isNaN(Number(ob.spots)) == NaN) {
+        return 20;  
+    } 
+    if(Number.isNaN(Number(ob.tel)) == NaN) {
+        return 21;  
+    }
+    if(Number(ob.spots) <= 0) {
+        return 25;
     }
     return 0;
 }
